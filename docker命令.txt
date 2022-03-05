@@ -1,0 +1,113 @@
+安装docker:  yum -y install docker
+查看版本        docker -v
+启动docker    systemctl start/stop/restart/status/enbale(开机启动) docker
+(systemctl命令是系统服务管理器指令，它是 service 和 chkconfig 两个命令组合)
+概要信息	      docker info
+帮助文档         docker -help
+列出镜像         docker images
+
+----------------镜像列表注释----------------------------------
+ REPOSITORY：镜像所在的仓库名称
+ TAG：镜像标签
+ IMAGE ID：镜像ID
+ CREATED：镜像的创建日期（不是获取该镜像的日期）
+ SIZE：镜像大小
+ 这些镜像都是存储在Docker宿主机的/var/lib/docker目录下
+------------------------------------------------------------------
+docker run --name container_name -i -t docker.io/ubunto:12.04 /bin/bash(从docker.io的仓库中拉去ubunto标签为12.04的)
+网络中搜寻镜像  docker search 
+docker配置镜像计算器  vi /etc/docker/daemon.json
+		     {"registry-mirrors": ["https://docker.mirrors.ustc.edu.cn"]
+阿里云的（两个二选一） "registry-mirrors": ["https://alzgoonw.mirror.aliyuncs.com"] }
+配置后需重启docker    service docker restart
+拉取镜像                      docker pull name:version
+删除镜像                      docker rmi image_id
+删除所有镜像	    docker rmi 'docker images -q'	
+----------------------------容器部分---------------------------------------
+查看正在运行的容器      docker ps    
+查看所有的容器             docker ps -a
+查看最后一次运行的容器 docker ps -l
+查看停止的容器             docker ps -f status=exited 	
+创建容器    -i：表示运行容器
+                 -t：表示容器启动后会进入其命令行。加入这两个参数后，容器创建就能登录进去。即分配一个伪终端。
+                 –name :为创建的容器命名。
+	  -v：表示目录映射关系（前者是宿主机目录，后者是映射到宿主机上的目录），可以使用多个－v做多个目录或文件映射。注意：最好做目录映射，在宿主机上做修改，然后共享到容器上。
+	  -d：在run后面加上-d参数,则会创建一个守护式容器在后台运行（这样创建容器后不会自动登录容器，如果只加-i -t两个参数，创建后就会自动进去容器）。
+	  -p：表示端口映射，前者是宿主机端口，后者是容器内的映射端口。可以使用多个－p做多个端口映射
+	  CentOS7中的安全模块selinux把权限禁掉了，我们需要添加参数–privileged=true来解决挂载的目录没有权限的问题	
+创建           docker run -di  -v xx:xx --name=xxx  image:version
+登录	  docker exec -it   container_name /bin/bash
+停止	  docker stop container_name/id
+启动已运行过的  docker start container_name
+查看容器IP  docker inspect container_name
+直接输出IP   docker inspect --fromat'{{.NetworkSetting.IPAddress}}' container_name
+删除容器      docker rmi container_name/id
+删除所有      docker rmi 'docker ps -aq'	
+-----------------------------mysql---------------------------------------
+docker pull mysql
+docker run -di --name=mysql -p 3306:3306 -e MYSYQ_ROOT_PASSWORD=xxx mysql:5.7
+docker exec -it mysq /bin/bash
+mysql -u root -p xx
+GRANT ALL PRIVILEGES ON *.* TO '@root'@'%' IDENTIFIED BY 'password' WITH GRANT OPTION
+----------------------------tomcat------------------------------------------------
+docker pull  tomcat:7-jre8
+docker run -id --name=tomcat -p 9100:8080 tomcat:7-jre8
+------------------------------nginx----------------------------------------------
+docker pull nginx
+docker run -di --name=nginx -p 80:80 nginx
+------------------------------redis-------------------------------------------------
+docker pull redis
+docker run -di --name=redis -p 6379:6379 redis
+------------------------------fastdfs-------------------------------------------
+docker pull morunchang/fastdfs
+docker run -d --name=tracker --net=host morunchang/fastdfs sh tracker.sh
+docker run -d --name=storage --net=host  -e TRACKER_IP=192.168.211.132:22122 -e GROUP_NAME=gourp1 morunchang/fastdfs sh strorage.sh
+docker exec -it storage /bin/bash-->vi /etc/nginx/conf/nginx.conf配置
+location ~/M00{root /data/fast_data/data;ngx_fastdfs_module}
+禁止缓存add_header Cache-Control no-store;
+退出再重启  exit -->docker restart storage
+开启启动设置 docker update --restart=always tracker/storage
+--------------------------------容器与镜像备份----------------------------------
+容器保存为镜像  docker commit nginx mynginx
+镜像备份            docker  save -o myninx.tar mynginx (-0表示输出到文件) 
+                         docker load -i mynginx.tar
+-------------------------------dockerfile---------------------------------- 
+mkdir demo    cd demo   vim a   vim  Dockerfile
+FROM centos
+MAINTAINER ljh
+WORKDIR /root/workdir
+RUN touch te
+ADD a b
+ENV key1 "hello"
+语法解释：
+#  ：代表注释
+FROM centos  ： 代表依据基本的镜像来创建
+MAINTAINER ljh ：代表就是作者是谁
+WORKDIR /root/workdir :代表就是创建容器时进入工作的目录是容器中的/root/workdir目录
+RUN touch te  :代表就是RUN 运行命令  运行一个创建空文件te
+COPY ["HI","."] ：代表从宿主系统中复制HI 文件到容器系统中工作目录中的当前路径下
+ADD a b ：代表从宿主机所在Dockerfile文件的目录下Copy 文件A 到容器中的b文件 b文件的目录为工作目录下。
+ENV key1 "hello" ：定义linux中的环境变量。如下：   开启容器后可用echo $key查看对应变量值
+定义一个：key value 
+定义多个：key=value key2=value2
+
+创建自定义镜像  docker build -t mycentos .
+docker build : 表示通过Dockerfile文件来创建镜像
+-t mycentos 表示 给与镜像的名称和版本  为：mycentos:lasted (lasted可以不写)
+. 表示从当前目录下进行加载Dockerfile文件
+
+
+springboot微服务部署
+先创建dockerfile文件
+FROM java:8
+MAINTAINER ljh
+ADD demo-0.0.1-SNAPSHOT.jar app.jar
+ENTRYPOINT ["java","-jar","/app.jar"]   表示执行命令 java -jar app.jar
+EXPOSE 8080
+构建镜像  docker build -t demomyapp .
+创建容器  docker run -di --name=myapp -p 8080:8080
+
+ 
+
+
+ 

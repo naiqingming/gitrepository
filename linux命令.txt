@@ -1,0 +1,22 @@
+1.配置java环境
+vi  /etc/profile
+JAVA_HOME=/usr/local/jdk1.8.0_181
+CLASSPATH=.:$JAVA_HOME/lib.tools.jar
+PATH=$JAVA_HOME/bin:$PATH
+export JAVA_HOME CLASSPATH PATH 
+重新加载profile文件
+source profile
+2.查看是否安装了jdk
+rpm -qa | grep java
+3.卸载已经安装的
+rpm -e --nodeps javajdk
+4.解压
+tar -vxf jdk (-c 目录)     有z为解压，没有就是解包
+5.压缩
+tar -cvf jdk      有z为压缩，没有就是打包
+6.配置静态IP
+vi /etc/sysconfig/network-scripts/ifcfg-ens33
+7.重启网络
+service network restart
+8.关闭防火墙
+systemctl stop firewalld
