@@ -58,6 +58,49 @@ docker run -di --name=nginx -p 80:80 nginx
 ------------------------------redis-------------------------------------------------
 docker pull redis
 docker run -di --name=redis -p 6379:6379 redis
+------------------------------Elasticsearch--------------------------------------------
+docker pull elasticsearch:5.6.8
+docker run -di --name=es -p 9200:9200 -p 9300:9300 elasticsearch:5.6.8  (9200Web管理,9300服务端口)
+修改配置文件开启远程连接
+docker cp es:/usr/share/elasticsearch/config/elasticsearch.yml ./
+http.host与transport.host的注释去掉
+cluster.name 集群命名
+http.cors.enabled:true
+http.cors.allow-origin:"*"
+network.host:192.168.211.132
+docker cp ./elasticsearch.yml es:/usr/share/elasticsearch/config/
+重启后发现重启启动失败了，这时什么原因呢？这与我们刚才修改的配置有关，因为elasticsearch在启动的时候会进行一些检查，比如最多打开的文件的个数以及虚拟内存区域数量等等，如果你放开了此配置，意味着需要打开更多的文件以及虚拟内存，所以我们还需要系统调优
+修改vi /etc/security/limits.conf ，追加内容 (nofile是单个进程允许打开的最大文件个数 soft nofile 是软限制 hard nofile是硬限制 )
+* soft nofile 65536
+* hard nofile 65536
+修改vi /etc/sysctl.conf，追加内容 (限制一个进程可以拥有的VMA(虚拟内存区域)的数量 )
+vm.max_map_count=655360
+执行下面命令 修改内核参数马上生效
+sysctl -p
+重新启动虚拟机，再次启动容器，发现已经可以启动并远程访问
+reboot
+创建es-head插件：
+docker pull docker.io/mobz/elasticsearch-head:5
+docker run -di --name=es-head -p 9100:9100 docker.io/mobz/elasticsearch-head:5
+------跨域配置
+修改elasticsearch/config下的配置文件：elasticsearch.yml，增加以下三句命令，并重启:
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+network.host: 192.168.211.132
+其中：
+http.cors.enabled: true：此步为允许elasticsearch跨域访问，默认是false。
+http.cors.allow-origin: "*"：表示跨域访问允许的域名地址（*表示任意）。
+重启
+ docker restart changgou_elasticsearch
+------IK安装
+unzip elasticsearch-analysis-ik-5.6.8.zip
+mv elasticsearch ik
+docker cp ./ik es:/usr/share/elasticsearch/plugins
+docker restart es
+-------Kibana
+docker pull docker.io/kibana:5.6.8
+docker run -it -d -e ELASTICSEARCH_URL=http://192.168.211.132:9200 --name kibana --restart=always -p 5601:5601 kibana:5.6.8
+
 ------------------------------fastdfs-------------------------------------------
 docker pull morunchang/fastdfs
 docker run -d --name=tracker --net=host morunchang/fastdfs sh tracker.sh

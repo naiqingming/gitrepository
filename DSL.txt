@@ -1,0 +1,207 @@
+----DSL语句
+查询所有索引 GET /_cat/indices?v
+删除索引        DELETE /xxx
+新增索引        PUT /user
+创建映射 
+PUT /user/userinfo/_mapping
+{
+"properties":{
+   "name":{
+       "type":"text",
+       "analyzer":"ik_smart",
+        "search_analyzer":"ik_smart",
+         "store":false
+    },
+   "city":{
+       "type":"text",
+       "analyzer":"ik_smart",
+        "search_analyzer":"ik_smart",
+         "store":false
+    },
+   "age":{
+       "type":"long",
+         "store":false
+    },
+   "description":{
+       "type":"text",
+       "analyzer":"ik_smart",
+        "search_analyzer":"ik_smart",
+         "store":false
+    }
+  }
+}
+新增文档数据(1为id)，也可以整个替换
+PUT /user/userinfo/1
+{
+   "name":"李四",
+   "age":22,
+    "city":"深圳",
+     "description":"kkkk"
+}
+替换文档数据 
+POST /user/userinfo/4/_update
+{
+     "doc":{
+           "name":"ssss",
+            "age":32
+       }
+}
+删除文档数据
+DELETE user/userinfo/id
+查询数据
+查询所有  GET /user/userinfo/_search
+根据id      GET /user/userinfo/id
+排序         GET  /user/userinfo/_search
+ 	{
+	    "query":{
+	        "match_all":{}
+                     },
+                     "sort":{
+	          "age":{
+	            "order":"desc"
+                      }
+                     }
+	}
+分页        GET /user/_search
+	{
+                    "query":{
+                    "match_all": {}
+                     },
+                      "sort":{
+                       "age":{
+                      "order":"desc"
+   	        }
+ 	      },
+ 	    "from": 0,
+  	     "size": 2
+	}
+过滤查询（词条查询）--term
+GET _search
+{
+   "query":{
+       "term":{      
+          "city":"武汉"
+         }
+     }
+}
+terms可以指定多个条件
+GET _search
+{
+  "query":{
+    "terms":{
+      "city":
+        [
+          "武汉",
+          "广州"
+        ]
+    }
+  }
+}
+范围查询--range
+#gt表示> gte表示=>
+#lt表示< lte表示<=
+GET _search
+{
+  "query":{
+    "range": {
+      "age": {
+        "gte": 30,
+        "lte": 57
+      }
+    }
+  }
+}
+过滤查询,拥有某个filed的数据
+GET _search
+{
+  "query": {
+    "exists":{
+      "field":"address"
+    }
+  }
+}
+bool过滤查询
+#must : 多个查询条件的完全匹配,相当于 and。
+#must_not : 多个查询条件的相反匹配，相当于 not。
+#should : 至少有一个查询条件匹配, 相当于 or。
+GET _search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "city": {
+              "value": "深圳"
+            }
+          }
+        },
+        {
+          "range":{
+            "age":{
+              "gte":20,
+              "lte":99
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+查询所有 match_all
+GET _search
+{ 
+      "query":{
+       "match_all":{}
+}
+}
+查询 match 会先分词再查询
+#字符串匹配
+GET _search
+{
+  "query": {
+    "match": {
+      "description": "武汉"
+    }
+  }
+}
+前缀查询 prefix
+GET _search
+{
+     "query":{
+      "prefix":{
+       "name":{
+         "value":"赵"
+}
+}
+}
+}
+多字段查询----multi_match
+GET _search
+{
+  "query": {
+    "multi_match": {
+      "query": "深圳",
+      "fields": [
+        "city",
+        "description"
+      ]
+    }
+  }
+}
+高亮查询----highlight
+GET user/_search
+{
+  "query": {
+    "match": {
+      "description": "武汉"
+    }
+  },
+  "highlight": {
+    "pre_tags": "<span style='color:red'>",
+    "post_tags": "</span>", 
+    "fields": {
+      "description": {}
+    }
+  }
+}
